@@ -1,0 +1,10 @@
+{
+  "interval": 60,
+  "config": {
+    "url": {
+      "name": "URL",
+      "value": "http://www.ecmanaged.com"
+    }
+  },
+  "name": "CHECK URL"
+}
