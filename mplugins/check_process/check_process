@@ -54,10 +54,10 @@ class CheckProcess(MPlugin):
 	        
         if count:
             data = {
-                'count': count,
+                'processes': count,
                 'threads': threads,
-                'memory_rss': self._to_mb(total_rss),
-    	        'memory_vms': self._to_mb(total_vms),
+                'memory_rss': self.to_mb(total_rss),
+    	        'memory_vms': self.to_mb(total_vms),
 	        'create_time': time() - create_time,
     	        'uids': uids,
 	        'gids': gids,
@@ -65,10 +65,14 @@ class CheckProcess(MPlugin):
 	        'nice': nice
             }
             metrics = {
-                'count': count,
-                'threads': threads,
-                'memory_rss': self._to_mb(total_rss),
-                'memory_vms': self._to_mb(total_vms)
+                'Processes and Threads': {
+                    'processes': count,
+                    'threads': threads
+                },
+                'Process Memory': {
+                    'memory_rss': self.to_mb(total_rss),
+                    'memory_vms': self.to_mb(total_vms)
+                }
             }
             
             self.exit(OK,data,metrics)

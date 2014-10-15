@@ -17,7 +17,8 @@ class ApacheStatus(MPlugin):
            self.exit(CRITICAL, message="Invalid URL")
            
         # Add auto to server-status url
-        url = url + '?auto'
+        if not url.endswith('?auto'):
+            url = url + '?auto'
 
         # Set timeout
         socket.setdefaulttimeout(self.config.get('timeout',TIMEOUT))
@@ -102,10 +103,10 @@ class ApacheStatus(MPlugin):
 
             (key, value) = line.split(': ')
             if key == 'Total Accesses':
-                parsed['total_accesses'] = self._counter(int(value),'total_accesses')
+                parsed['total_accesses'] = self.counter(int(value),'total_accesses')
                 
             if key == 'Total kBytes':
-                parsed['total_kbytes'] = self._counter(int(value),'total_kbytes')
+                parsed['total_kbytes'] = self.counter(int(value),'total_kbytes')
                 
             if key == 'CPULoad':
                 parsed['cpuload'] = float(value)
