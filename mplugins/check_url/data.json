@@ -3,7 +3,7 @@
   "config": {
     "url": {
       "name": "URL",
-      "value": "http://www.ecmanaged.com"
+      "value": "http://www.google.com"
     }
   },
   "name": "CHECK URL"

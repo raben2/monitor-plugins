@@ -124,15 +124,17 @@ class MPlugin:
             
         # Write counters
         self._counters_write()
+        
+        print str(data)
 
         print str(
             self._to_json({
                 'id': self.id,
-                'name': self.name,
-                'message': message,
-                'data': data,
-                'metrics': metrics
-            })
+                'name': self._to_utf8(self.name),
+                'message': self._to_utf8(message),
+                'data': self._to_utf8(data),
+                'metrics': self._to_utf8(metrics)
+            }).encode('utf-8')
         )
         
         sys.exit(state)
@@ -361,17 +363,32 @@ class MPlugin:
             pass
 
         return retval
+        
+    def _to_utf8(self,elm):
+        # FIXME: Do it recursive
+        from codecs import decode
+        if self._is_dict(elm):
+            for key in elm.keys():
+                if self._is_dict(elm[key]):
+                    for key2 in elm[key].keys():
+                        elm[key][key2] = decode(elm[key][key2],'utf-8','ignore')
+                        
+                if self._is_string(elm[key]):
+                    elm[key] = decode(elm[key],'utf-8','ignore')
+                
+        return elm
+        
 
-    @staticmethod
-    def _to_json(elm):
+    def _to_json(self, elm):
         import simplejson as json
 
         retval = ''
 
-        try:
-            retval = json.dumps(elm)
-        except:
-            pass
+#        try:
+        if True:
+            retval = json.dumps(elm).encode('utf8')
+#        except:
+#            pass
 
         return retval
 
