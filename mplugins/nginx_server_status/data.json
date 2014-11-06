@@ -1,0 +1,10 @@
+{
+  "interval": 60,
+  "config": {
+    "url": {
+      "name": "Nginx status URL",
+      "value": "http://cascoporro.com/nginx_status"
+    }
+  },
+  "name": "NGINX STATUS"
+}

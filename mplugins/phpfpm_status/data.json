@@ -1,0 +1,10 @@
+{
+  "interval": 60,
+  "config": {
+    "url": {
+      "name": "PHP-FPM status URL",
+      "value": "http://cascoporro.com/status"
+    }
+  },
+  "name": "PHP-FPM STATUS"
+}
