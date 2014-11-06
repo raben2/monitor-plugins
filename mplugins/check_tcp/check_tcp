@@ -32,10 +32,6 @@ class CheckTCP(MPlugin):
         except socket.gaierror:
 	    self.exit(CRITICAL, message="Hostname could not be resolved")
 
-        print "remote ip: " + remote_ip
-        print "port: " + port
-
-
         # Connect
         start_time = time()
         try:
