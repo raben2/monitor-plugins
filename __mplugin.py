@@ -125,8 +125,6 @@ class MPlugin:
         # Write counters
         self._counters_write()
         
-        print str(data)
-
         print str(
             self._to_json({
                 'id': self.id,

@@ -22,17 +22,23 @@ class CheckURL(MPlugin):
         # Fetch
         try:
             urlopen = urllib.urlopen(url)
+
         except:
             self.exit(CRITICAL, message="Unable to open URL")
         
         # Get size
         size = 0
         headers = urlopen.info()
+        content = ''.join(urlopen.readlines())
+        
         if "content-length" in headers:
             size = int(headers["Content-Length"])
         
+        else:
+            size = len(content)
+        
         data = {
-            'content': ''.join(urlopen.readlines()),
+            'content': content,
             'code': urlopen.getcode(),
             'size': size
         }
@@ -46,6 +52,6 @@ class CheckURL(MPlugin):
         urlopen.close()
         self.exit(OK,data,metrics)
         
-
+        
 monitor = CheckURL()
 monitor.run()
