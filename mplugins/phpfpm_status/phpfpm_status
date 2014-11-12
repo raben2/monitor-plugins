@@ -9,18 +9,22 @@ from __mplugin import OK, CRITICAL, TIMEOUT
 class PHPfpmStatus(MPlugin):
     def run(self):
         url = self.config.get('url')
-	# Verify URL
+
+        # Verify URL
         if not url:
-		self.exit(CRITICAL, message="Invalid URL")
-	else:
-		if (re.search("\?html$", url)) or re.search("\?xml$", url) or re.search("\?full$", url) or (re.search("\&full$", url)):
-			self.exit(CRITICAL, message="Invalid URL, we accept url like this domain.com?json")
-		
-		elif not re.search("\?json$", url):
-			url = url + '?json'
-		else:
-			pass
-	# Fetch URL
+            self.exit(CRITICAL, message="Invalid URL")
+
+        if (re.search("\?html$", url)) or re.search("\?xml$", url) or re.search("\?full$", url) or (re.search("\&full$", url)):
+            self.exit(CRITICAL, message="Invalid URL, we accept url like this domain.com?json")
+        
+        elif not re.search("\?json$", url):
+            url = url + '?json'
+            
+        # Set timeout
+        timeout = self.config.get('timeout',TIMEOUT)
+        socket.setdefaulttimeout(int(timeout))
+            
+        # Fetch URL
         try:
             urlopen = urllib.urlopen(url)
         except:
@@ -28,34 +32,31 @@ class PHPfpmStatus(MPlugin):
 
         if urlopen.getcode() != 200:
             self.exit(CRITICAL, message="Unable to open URL")
-	 
-	# Set timeout
-        socket.setdefaulttimeout(self.config.get('timeout',TIMEOUT))
-	
-	data = self._parse_data(urlopen)
-	metrics = {
-		'Connections': {
-		    'accepted conn': self._counter(data['accepted conn'],'accepted conn')
-		},
-		'Processes': {
-		   'idle processes': data['idle processes'],
-		   'active processes': data['active processes'],
-		   'total processes': data['total processes']
-		}
-	}
-	self.exit(OK,data,metrics)
-    	
+    
+        data = self._parse_data(urlopen)
+        metrics = {
+            'Connections': {
+                'accepted conn': self._counter(data['accepted conn'],'accepted conn')
+            },
+            'Processes': {
+               'idle processes': data['idle processes'],
+               'active processes': data['active processes'],
+               'total processes': data['total processes']
+            }
+        }
+        
+        self.exit(OK,data,metrics)
+        
     def _parse_data(self, url):
-	url = url.read()
-	parsed = {}
-       	decoded = self._from_json(url)
-	for key in decoded.keys():
-		if key == 'pool' or key == 'process manager' or key == 'start time':
-			pass
-		else:
-			parsed[key] = decoded[key] 
+        url = url.read()
+        parsed = {}
+        decoded = self._from_json(url)
+        
+        for key in decoded.keys():
+            if key != 'pool' and key != 'process manager' and key != 'start time':
+                parsed[key] = decoded[key] 
 
-	return parsed
+        return parsed
     
 monitor = PHPfpmStatus()
 monitor.run()

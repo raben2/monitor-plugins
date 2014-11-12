@@ -21,7 +21,8 @@ class ApacheStatus(MPlugin):
             url = url + '?auto'
 
         # Set timeout
-        socket.setdefaulttimeout(self.config.get('timeout',TIMEOUT))
+        timeout = self.config.get('timeout',TIMEOUT)
+        socket.setdefaulttimeout(int(timeout))
 
         # Fetch URL
         try:

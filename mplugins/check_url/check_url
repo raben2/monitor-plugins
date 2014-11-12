@@ -17,7 +17,8 @@ class CheckURL(MPlugin):
            self.exit(CRITICAL, message="Invalid URL")
         
         # Set timeout
-        socket.setdefaulttimeout(self.config.get('timeout',TIMEOUT))
+        timeout = self.config.get('timeout',TIMEOUT)
+        socket.setdefaulttimeout(int(timeout))
         
         # Fetch
         try:
