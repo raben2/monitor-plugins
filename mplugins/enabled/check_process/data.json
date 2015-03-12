@@ -1,0 +1,10 @@
+{
+  "interval": 60,
+  "config": {
+    "process": {
+      "name": "Process name or regex",
+      "value": "chrome"
+    }
+  },
+  "name": "CHECK PROCESS"
+}

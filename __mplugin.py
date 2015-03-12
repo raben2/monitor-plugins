@@ -22,6 +22,8 @@ LOG_FILE_NAME = 'mplugin.log'
 COUNTER_FILE_NAME = '.counter.dat'
 TOUCH_FILE_NAME = '.touch'
 
+INTERVAL_INDEX = '__interval__'
+
 CHECK_TIMEOUT = 55
 DEFAULT_INTERVAL = 60
 
@@ -44,12 +46,12 @@ log = logging
 
 
 def _timeout(signum, frame):
-    from os import _exit
-    _exit(TIMEOUT)
+    sys.exit(TIMEOUT)
 
 
 class MPlugin:
     def __init__(self, plugin_path=None):
+
         # set alarm for timeout
         signal.signal(signal.SIGALRM, _timeout)
         signal.alarm(CHECK_TIMEOUT)
@@ -80,14 +82,13 @@ class MPlugin:
         self.interval = self.data.get('interval', DEFAULT_INTERVAL)
         self.id = str(self.data.get('id', None))
             
-        # Get counters information
-        self._counters = self._counters_read()
-
         # Get name from config or filename
         self.name = str(self.data.get('name', basename(sys.argv[0])))
         
-        # Get last execution time
-        self.real_interval = self._get_real_interval()
+        # Initialize variables for counters and intervals
+        self._time_start = time()
+        self._time_interval = None
+        self._counters = None
 
     def write_config(self, config=None):
         if not config or not self._is_dict(config):
@@ -96,7 +97,6 @@ class MPlugin:
         # Same config?
         json_config = self._to_json(config)
         if self.data.get('.raw', '') == json_config:
-            log.debug('No need to update config')
             return
 
         # Read from configfile
@@ -122,8 +122,9 @@ class MPlugin:
         data = self._sanitize(data)
         metrics = self._sanitize(metrics)
             
-        # Write counters
+        # Write counters and interval
         self._counters_write()
+        self._interval_write()
         
         print str(
             self._to_json({
@@ -131,7 +132,8 @@ class MPlugin:
                 'name': self._to_utf8(self.name),
                 'message': self._to_utf8(message),
                 'data': self._to_utf8(data),
-                'metrics': self._to_utf8(metrics)
+                'metrics': self._to_utf8(metrics),
+                'interval': self._get_time_interval()
             }).encode('utf-8')
         )
         
@@ -196,10 +198,10 @@ class MPlugin:
         
         if exists(counters_file):
             # check last modification time
-            mtime = getmtime(counters_file)
+            mod_time = getmtime(counters_file)
             valid_time = time() - self.interval - 30
             
-            if mtime > valid_time:
+            if mod_time > valid_time:
                 return self._from_json(self._file_read(counters_file))
             else:
                 log.warning("Ignored counters file, is too old")
@@ -210,53 +212,73 @@ class MPlugin:
         if self._counters:
             counters_file = join(self.path, COUNTER_FILE_NAME)
             self._file_write(counters_file, self._to_json(self._counters))
+
+    def _interval_write(self):
+        touch_file = join(self.path, TOUCH_FILE_NAME)
+        with open(touch_file, 'a'):
+            utime(touch_file, (self._time_start, self._time_start))
             
-    def _get_real_interval(self):
+    def _get_time_interval(self):
+        """
+        Read modification time from touch file and calculate
+        interval from last run time
+
+        @return: interval
+        """
+        if self._time_interval:
+            return self._time_interval
+
+        touch_file = join(self.path, TOUCH_FILE_NAME)
+
+
         retval = 1
-        
-        touch_file = join(self.path,TOUCH_FILE_NAME)
-        
-        # Read mtime from touch file
         if exists(touch_file):
             tmp = int(time() - getmtime(touch_file))
             retval = tmp if tmp > 0 else 1
-            
-        # touch file
-        with open(touch_file, 'a'):
-            utime(touch_file, None)
-            
+
+        self._time_interval = retval
         return retval
-        
 
     # Helper functions
-
-    def _sanitize(self, obj):
+    def _sanitize(self, obj, recursion=0):
         if not self._is_dict(obj):
-           return obj
- 
+            return obj
+
+        # Avoid recursion loop
+        recursion += 1
+        if recursion > 100:
+            return obj
+
         for idx in obj:
             if self._is_dict(obj[idx]):
-                obj[idx] = self._sanitize(obj[idx])
+                obj[idx] = self._sanitize(obj[idx], recursion)
+
             elif self._is_list(obj[idx]):
-                obj[idx] = self._sanitize(obj[idx])
+                obj[idx] = self._sanitize(obj[idx], recursion)
+
             elif self._is_string:
                 obj[idx] = str(obj[idx])
                 pass
+
             elif self._is_number(obj[idx]):
                 pass
+
             else:
                 obj[idx] = str(obj[idx])
-                
+
         return obj
 
-    def gauge(self, value):
+    def gauge(self, value, interval=None):
         """
             value divided by the step interval
         """
         if not self._is_number(value):
             return value
-        
-        return value / self.real_interval
+            
+        if not interval:
+            interval = self._get_time_interval()
+
+        return value / interval
 
     def counter(self, value, index, gauge=True):
         """
@@ -265,9 +287,16 @@ class MPlugin:
         if not self._is_number(value):
             return value
 
+        # Read counters
+        if self._counters is None:
+            self._counters = self._counters_read()
+            
+        # Get interval
+        interval = self._get_counter_interval(index)
+
         retval = 0
         if self._counters.get(index):
-            retval = self.gauge(value - self._counters[index]) if gauge else (value - self._counters[index])
+            retval = self.gauge(value - self._counters[index], interval) if gauge else (value - self._counters[index])
 
         # Save counter
         self._counters[index] = value
@@ -279,8 +308,19 @@ class MPlugin:
             Save values for metrics, compare with latest values and return difference
             convert counter values to average values
         """
+
+        # Read counters
+        if self._counters is None:
+            self._counters = self._counters_read()
+
         if not self._counters.get(index):
             self._counters[index] = {}
+            
+        if not self._counters.get(INTERVAL_INDEX):
+            self._counters[INTERVAL_INDEX] = {}
+
+        # Read interval from last counter
+        interval = self._get_counter_interval(index)
 
         current_counter = self._counters[index]
         new_counter = {}
@@ -309,7 +349,7 @@ class MPlugin:
                     if current_counter[elm].get(elm2):
                         diff = obj[elm][elm2] - current_counter[elm].get(elm2)
                         if diff > 0:
-                            retval[elm][elm2] = self.gauge(diff) if gauge else diff
+                            retval[elm][elm2] = self.gauge(diff, interval) if gauge else diff
 
             elif self._is_list(obj.get(elm)):
                 # Not supported
@@ -324,17 +364,52 @@ class MPlugin:
                 if current_counter.get(elm):
                     diff = obj[elm] - current_counter.get(elm)
                     if diff > 0:
-                        retval[elm] = self.gauge(diff) if gauge else diff
+                        retval[elm] = self.gauge(diff, interval) if gauge else diff
 
+        # Update index and last used time
         self._counters[index] = new_counter
+        self._counters[INTERVAL_INDEX][index] = time()
 
         return retval
 
+    def _get_counter_interval(self, index):
+        """
+        @param index: counter index
+        @return: interval calculated from last updated index
+        """
+        interval = self._get_time_interval()
+
+        # Read counters
+        if self._counters is None:
+            self._counters = self._counters_read()
+
+        if self._counters.get(INTERVAL_INDEX):
+            if self._counters[INTERVAL_INDEX].get(index):
+                last_time = self._counters[INTERVAL_INDEX][index]
+                interval = int(time() - last_time)
+
+        return interval
+        
     def to_gb(self, n):
         return self._convert_bytes(n, 'G')
 
     def to_mb(self, n):
         return self._convert_bytes(n, 'M')
+
+    def _to_utf8(self, elm):
+        # FIXME: Do it recursive
+        from codecs import decode
+        if self._is_dict(elm):
+            for key in elm.keys():
+                if self._is_dict(elm[key]):
+                    for key2 in elm[key].keys():
+                        if self._is_string(elm[key][key2]):
+                            elm[key][key2] = decode(elm[key][key2], 'utf-8', 'ignore')
+
+                if self._is_string(elm[key]):
+                    elm[key] = decode(elm[key], 'utf-8', 'ignore')
+
+        return elm
 
     @staticmethod
     def _state_to_str(state):
@@ -362,31 +437,16 @@ class MPlugin:
 
         return retval
         
-    def _to_utf8(self,elm):
-        # FIXME: Do it recursive
-        from codecs import decode
-        if self._is_dict(elm):
-            for key in elm.keys():
-                if self._is_dict(elm[key]):
-                    for key2 in elm[key].keys():
-                        elm[key][key2] = decode(elm[key][key2],'utf-8','ignore')
-                        
-                if self._is_string(elm[key]):
-                    elm[key] = decode(elm[key],'utf-8','ignore')
-                
-        return elm
-        
-
-    def _to_json(self, elm):
+    @staticmethod
+    def _to_json(elm):
         import simplejson as json
 
         retval = ''
 
-#        try:
-        if True:
+        try:
             retval = json.dumps(elm).encode('utf8')
-#        except:
-#            pass
+        except:
+            pass
 
         return retval
 
@@ -454,4 +514,3 @@ class MPlugin:
             return True
             
         return False
-
