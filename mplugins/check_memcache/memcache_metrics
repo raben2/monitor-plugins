@@ -1,0 +1,56 @@
+'metrics' => array(
+    'rusage_user' => array(
+        'name'    => 'user time',
+        'help'    => 'user time',
+        'type'    => 'STRING',
+        'unit'    => 'seconds',
+    ),
+    'rusage_system' => array(
+        'name'    => 'system time',
+        'help'    => 'system time',
+        'type'    => 'STRING',
+        'unit'    => 'seconds',
+    ),
+    'bytes' => array(
+        'name'    => 'bytes used to store items',
+        'help'    => 'bytes used to store items',
+        'type'    => 'STRING',
+        'unit'    => 'bytes',
+    ),
+    'curr_connections' => array(
+        'name'    => 'open connections',
+        'help'    => 'open connections',
+        'type'    => 'STRING',
+        'unit'    => 'connections',
+    ),
+    'hit_percentage' => array(
+        'name'    => 'cache hit percentage',
+        'help'    => 'cache hit percentage',
+        'type'    => 'INT',
+        'unit'    => 'percentage',
+    ),
+    'miss_percentage' => array(
+        'name'    => 'cache miss percentage',
+        'help'    => 'cache miss percentage',
+        'type'    => 'INT',
+        'unit'    => 'percentage',
+    ),
+    'evictions' => array(
+        'name'    => 'number of evicted items',
+        'help'    => 'number of evicted items',
+        'type'    => 'STRING',
+        'unit'    => 'items',
+    ),
+    'reclaimed' => array(
+        'name'    => 'number of reclaimed items',
+        'help'    => 'number of reclaimed items',
+        'type'    => 'STRING',
+        'unit'    => 'items',
+    ),
+    'conn_yields' => array(
+        'name'    => 'yielded connections',
+        'help'    => 'yielded connections',
+        'type'    => 'STRING',
+        'unit'    => 'connections',
+    ),
+),
