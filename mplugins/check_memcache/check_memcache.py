@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 import sys
+
+sys.path.append('../../../plugins')
+
 from __mplugin import MPlugin
 from __mplugin import OK, CRITICAL
 import memcache
