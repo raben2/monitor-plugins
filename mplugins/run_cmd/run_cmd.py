@@ -49,7 +49,6 @@ class RunCmd(MPlugin):
             except OSError:
                 self.exit(CRITICAL, message="Unable to run command")
         return res
-
     
 monitor = RunCmd()
 monitor.run()
