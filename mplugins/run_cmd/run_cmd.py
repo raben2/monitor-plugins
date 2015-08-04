@@ -20,21 +20,21 @@ class RunCmd(MPlugin):
         if not result:
             self.exit(CRITICAL, message="Empty output from the command")
 
-        if isinstance(data, str):
+        if isinstance(result, str):
             data['result_str'] = data
             data['result_num'] = None
-        elif isinstance(data, int) or isinstance(data, float):
+        elif isinstance(result, int) or isinstance(result, float):
             data['result_num'] = data
             data['result_str'] = None
         else:
             self.exit(CRITICAL, message="Unsupported opera")
+
         metrics = {
             'result': {
                 'result_str': data['result_str'],
-                'result_num':data['result_num']
-
-                }
+                'result_num': data['result_num']
             }
+        }
         self.exit(OK, data, metrics)
 
     def _run_command(self, cmd):
