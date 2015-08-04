@@ -1,0 +1,14 @@
+'metrics' => array(
+    'result_str' => array(
+        'name'    => 'command result(string)',
+        'help'    => 'command result(string)',
+        'type'    => 'STRING',
+        'unit'    => 'items',
+    ),
+    'result_num' => array(
+        'name'    => 'command result(numeric)',
+        'help'    => 'command result(numeric)',
+        'type'    => 'INT',
+        'unit'    => 'items',
+    ),
+),
