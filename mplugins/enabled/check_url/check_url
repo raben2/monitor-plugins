@@ -53,10 +53,10 @@ class CheckURL(MPlugin):
         
         metrics = {
             'Content Size': {
-              'size': size
+              'size': str(size) + 'B'
             },
             'Response time': {
-              'time': mytime
+              'time': str(mytime) + 's'
             }
         }
         

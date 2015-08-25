@@ -60,7 +60,7 @@ class CheckTCP(MPlugin):
         
         metrics = {
             'Connection time': {
-              'time': mytime
+              'time': str(mytime) . 's'
             }
         }
         
