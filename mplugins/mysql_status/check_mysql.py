@@ -5,13 +5,25 @@ sys.path.append('/opt/ecmanaged/ecagent/plugins')
 
 from __mplugin import MPlugin
 from __mplugin import OK, CRITICAL, TIMEOUT
-import MySQLdb as Database
+
 
 class MySQLStatus(MPlugin):
     def get_stats(self):
         host = self.config.get('host')
         user =self.config.get('user')
         password = self.config.get('password')
+
+        try:
+            import MySQLdb as Database # install MySQL-python using yum or apt-get
+        except ImportError:
+            import __helper as ecm
+            package = 'MySQL-python'
+            ecm.pip_install_single_package(package, True)
+
+        try:
+            import MySQLdb as Database
+        except ImportError:
+            self.exit(CRITICAL, message="Unable to install MySQL-python")
         
         try:
             self.conn = Database.connect(host=host, user=user, passwd=password)
