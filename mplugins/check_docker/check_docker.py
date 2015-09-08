@@ -17,7 +17,7 @@ class CheckDocker(MPlugin):
         address = self.config.get('address')
         cli = Client(base_url=address)
         try:
-            return cli.info()
+            return cli.containers(quiet=False, all=True, trunc=False, latest=False, since=None, before=None, limit=-1, size=False, filters=None)
         except:
             self.exit(CRITICAL, message="invalid base url")
 
