@@ -6,7 +6,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-
+import os
 import sys
 import requests
 import simplejson as json
@@ -15,6 +15,10 @@ sys.path.append('../../../plugins')
 
 from __mplugin import MPlugin
 from __mplugin import OK, CRITICAL
+
+root_dir = os.path.dirname(os.path.realpath(__file__))
+DATA_FILE = (root_dir + '/persistent.data')
+METRICS_MIN = 3
 
 
 class Monit(MPlugin):
@@ -30,10 +34,19 @@ class Monit(MPlugin):
             self.exit(CRITICAL, message="Unable to connecto to monit API")
   
         result = OK
-        msglist = []
-        data = {}
-        metrics = {}
+
+        # Read persisten file (To keep order)
+        perfile = self._file_read(DATA_FILE)
+        if not perfile:
+            perfile = ''
         
+        perlist = []        
+        for line in perfile.split('\n'):
+            if not line: continue
+            perlist.append(line)
+        
+        data = {}
+        msglist = []
         for mon in mons.keys():
             name = mons[mon].name
             state = mons[mon].running
@@ -56,9 +69,42 @@ class Monit(MPlugin):
                 'enabled': enabled,
                 'data': mons[mon].data
             }
-
+            
+            # Add new to end of persistent list
+            if not name in perlist:
+                perlist.append(name)
+                
         if not msglist:
-            msglist.append('ALL MONIT SERVICES ARE OK')
+            msglist.append('ALL ' + str(len(data.keys())) + ' MONIT SERVICES ARE OK')
+                
+        # Write persistent file with order
+        self._file_write(DATA_FILE,'\n'.join(perlist))
+        
+        # Add old mon
+        for name in perlist:
+            if not data.get(name):
+                data[name] = {}
+        
+        # Build metrics
+        metrics = {}
+        for name in perlist:
+            count_metrics = 0
+            metric_name = '__ph__' + name
+            if data[name].get('type'):
+              metric_name = data[name]['type'] + ": " + name
+              metrics[metric_name] = {}
+              
+              for k in data[name]['data'].keys():
+                  metrics[metric_name][k] = data[name]['data'][k]
+                  count_metrics = count_metrics + 1
+                
+            # Add placeholders (ensure same number of metrics on each graph)
+            # To keep order when some monitors has been deleted
+            if not metrics.get(metric_name):
+                metrics[metric_name] = {}
+                
+            for i in range(count_metrics, METRICS_MIN):
+                metrics[metric_name]['__ph__' + str(i)] = ''
 
         message = ' / '.join(msglist)            
         self.exit(result, data, metrics, message=message)
@@ -119,8 +165,6 @@ class MonitConn(dict):
                 
             if self.type == 'filesystem':
 		self.data['percent'] = self._xmlfind('block/percent')
-		self.data['usage']   = self._xmlfind('block/usage')
-		self.data['total']   = self._xmlfind('block/total')
                 
             elif self.type == 'system':
                 cpu_user = self._xmlfind('system/cpu/user','float')
@@ -132,14 +176,11 @@ class MonitConn(dict):
 		self.data['swap']   = self._xmlfind('system/swap/percent')
 
             elif self.type == 'process':
-                self.data['pid']      = self._xmlfind('pid')
-		self.data['uptime']   = self._xmlfind('uptime')
 		self.data['memory']   = self._xmlfind('memory/percent')
 		self.data['cpu']      = self._xmlfind('cpu/percent')
 		self.data['children'] = self._xmlfind('children')
             
             elif self.type == 'file':
-                self.data['timestamp'] = self._xmlfind('timestamp')
                 self.data['size'] = self._xmlfind('size')
                 
             self.monitored = bool(int(self._xmlfind('monitor')))
