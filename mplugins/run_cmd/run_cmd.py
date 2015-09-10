@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+import os
 import shlex
 import subprocess
 
@@ -45,32 +46,45 @@ class RunCmd(MPlugin):
     def _run_command(self, cmd):
         commands = cmd.split('|')
 
+        # Ensure we get full output
+        myenv = os.environ.copy()
+        myenv["COLUMNS"] = "2000"
+                
         result = 2
-        stdout = ''
+        stdout, stderr = '',''
+        
         for command in commands:
             try:
-                p = subprocess.Popen(shlex.split(command), stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+                p = subprocess.Popen(
+                    shlex.split(command),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    stdin=subprocess.PIPE,
+                    bufsize=0,
+                    env=myenv,
+                    universal_newlines=True,
+                    close_fds=(os.name == 'posix')
+                )
+
                 if stdout:
                     p.stdin.write(stdout)
                     
-                stdout = p.communicate()[0]
+                stdout,stderr = p.communicate()
                 result = p.wait()
 
-            except OSError:
-                self.exit(CRITICAL, message="Unable to run command")
+            except Exception as e:
+                self.exit(CRITICAL, message="Unable to run command: " + str(e))
 
-        # Try to conver string to int / float
         stdout = stdout.rstrip('\n')
-        try:
-            if str(float(stdout)) == stdout:
-                stdout = float(stdout)
-        except: pass
-        
-        try:
-            if str(int(stdout)) == stdout:
-                stdout = int(stdout)
-        except: pass
-             
+        if result and not stdout and stderr:
+            stdout = stderr
+
+	# Try to conver string to int / float
+	try: stdout = int(stdout)
+	except ValueError:
+	    try: stdout = float(stdout)
+            except ValueError: pass
+
         return result, stdout
     
 monitor = RunCmd()
