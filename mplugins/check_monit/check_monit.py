@@ -18,7 +18,7 @@ from __mplugin import OK, CRITICAL
 
 root_dir = os.path.dirname(os.path.realpath(__file__))
 DATA_FILE = (root_dir + '/persistent.data')
-METRICS_MIN = 3
+MIN_METRICS = 3
 
 
 class Monit(MPlugin):
@@ -29,28 +29,21 @@ class Monit(MPlugin):
         
         try:
             mons = MonitConn(username=username, password=password, port=port)
+
         except:
-            raise
             self.exit(CRITICAL, message="Unable to connecto to monit API")
   
+        data = {}
+        metrics = {}
+        msglist = []
         result = OK
 
-        # Read persisten file (To keep order)
-        perfile = self._file_read(DATA_FILE)
-        if not perfile:
-            perfile = ''
-        
-        perlist = []        
-        for line in perfile.split('\n'):
-            if not line: continue
-            perlist.append(line)
-        
-        data = {}
-        msglist = []
         for mon in mons.keys():
-            name = mons[mon].name
             state = mons[mon].running
             enabled = mons[mon].monitored
+            type = mons[mon].type
+            name = mons[mon].name
+            extra = mons[mon].data
             
             if not name:
                 continue
@@ -62,52 +55,33 @@ class Monit(MPlugin):
             if not enabled:
                 result = CRITICAL
                 msglist.append(name.upper() + ' is not monitored')
+                
+            name = name + ': ' + type
             
+            # Add data
             data[name] = {
-                'type': mons[mon].type,
+                'type': type,
                 'state': state,
                 'enabled': enabled,
-                'data': mons[mon].data
+                'data': extra
             }
             
-            # Add new to end of persistent list
-            if not name in perlist:
-                perlist.append(name)
-                
+            # Create metrics
+            metrics[name] = {}
+            count_metrics = 0
+            
+            for k in extra.keys():
+                metrics[name][k] = extra[k]
+                count_metrics = count_metrics + 1
+            
+            # Add placeholder for metrics (each monit has to have the same number of metrics)    
+            for i in range(count_metrics, MIN_METRICS):
+                metrics[name]['__ph__' + str(i)] = ''
+
         if not msglist:
             msglist.append('ALL ' + str(len(data.keys())) + ' MONIT SERVICES ARE OK')
-                
-        # Write persistent file with order
-        self._file_write(DATA_FILE,'\n'.join(perlist))
-        
-        # Add old mon
-        for name in perlist:
-            if not data.get(name):
-                data[name] = {}
-        
-        # Build metrics
-        metrics = {}
-        for name in perlist:
-            count_metrics = 0
-            metric_name = '__ph__' + name
-            if data[name].get('type'):
-              metric_name = data[name]['type'] + ": " + name
-              metrics[metric_name] = {}
-              
-              for k in data[name]['data'].keys():
-                  metrics[metric_name][k] = data[name]['data'][k]
-                  count_metrics = count_metrics + 1
-                
-            # Add placeholders (ensure same number of metrics on each graph)
-            # To keep order when some monitors has been deleted
-            if not metrics.get(metric_name):
-                metrics[metric_name] = {}
-                
-            for i in range(count_metrics, METRICS_MIN):
-                metrics[metric_name]['__ph__' + str(i)] = ''
-
-        message = ' / '.join(msglist)            
-        self.exit(result, data, metrics, message=message)
+            
+        self.exit(result, data, metrics, message=' / '.join(msglist))
         
 class MonitConn(dict):
     def __init__(self, host='localhost', port=2812, username=None, password='', https=False):
@@ -176,9 +150,9 @@ class MonitConn(dict):
 		self.data['swap']   = self._xmlfind('system/swap/percent')
 
             elif self.type == 'process':
-		self.data['memory']   = self._xmlfind('memory/percent')
-		self.data['cpu']      = self._xmlfind('cpu/percent')
-		self.data['children'] = self._xmlfind('children')
+		self.data['memory']    = self._xmlfind('memory/percent')
+		self.data['cpu']       = self._xmlfind('cpu/percent')
+		self.data['childrens'] = self._xmlfind('children')
             
             elif self.type == 'file':
                 self.data['size'] = self._xmlfind('size')
@@ -201,6 +175,9 @@ class MonitConn(dict):
 	            retval = int(retval)
 	        
             except: pass
+            
+            if not retval and type != 'text':
+                retval = 0
             
             return retval
         
