@@ -14,16 +14,9 @@ class MySQLStatus(MPlugin):
         password = self.config.get('password')
 
         try:
-            import MySQLdb as Database # install MySQL-python using yum or apt-get
-        except ImportError:
-            import __helper as ecm
-            package = 'MySQL-python'
-            ecm.pip_install_single_package(package, True)
-
-        try:
             import MySQLdb as Database
         except ImportError:
-            self.exit(CRITICAL, message="Unable to install MySQL-python")
+            self.exit(CRITICAL, message="Please install MySQL-python")
         
         try:
             self.conn = Database.connect(host=host, user=user, passwd=password)
