@@ -5,7 +5,14 @@ sys.path.append('/opt/ecmanaged/ecagent/plugins')
 
 from __mplugin import MPlugin
 from __mplugin import OK, CRITICAL, TIMEOUT
-import memcache
+
+
+# pip install python-memcached
+import_error = False
+try:
+    import memcache
+except:
+    import_error = True
 
 
 class MemcacheStatus(MPlugin):
@@ -13,6 +20,9 @@ class MemcacheStatus(MPlugin):
     def get_stats(self):
         host = self.config.get('host')
         port = self.config.get('port')
+
+        if import_error:
+            self.exit(CRITICAL, message="Please install python-memcached")
         
         memcache_client = memcache.Client(['%s:%s' %(host,port)])
         memcache_stats = memcache_client.get_stats()
