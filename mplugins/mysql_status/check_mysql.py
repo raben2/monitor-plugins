@@ -6,6 +6,11 @@ sys.path.append('/opt/ecmanaged/ecagent/plugins')
 from __mplugin import MPlugin
 from __mplugin import OK, CRITICAL, TIMEOUT
 
+import_error = False
+try:
+    import MySQLdb as Database
+except:
+    import_error = True
 
 class MySQLStatus(MPlugin):
     def get_stats(self):
@@ -13,10 +18,11 @@ class MySQLStatus(MPlugin):
         user =self.config.get('user')
         password = self.config.get('password')
 
-        try:
-            import MySQLdb as Database
-        except ImportError:
-            self.exit(CRITICAL, message="Please install MySQL-python")
+        if not self.which('memcached'):
+            self.exit(CRITICAL, message="Please install mysql-server")
+
+        if import_error:
+            self.exit(CRITICAL, message="Please install python-mysqldb or MySQL-python")
         
         try:
             self.conn = Database.connect(host=host, user=user, passwd=password)
