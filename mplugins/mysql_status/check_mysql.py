@@ -18,9 +18,6 @@ class MySQLStatus(MPlugin):
         user =self.config.get('user')
         password = self.config.get('password')
 
-        if not self.which('memcached'):
-            self.exit(CRITICAL, message="Please install mysql-server")
-
         if import_error:
             self.exit(CRITICAL, message="Please install python-mysqldb or MySQL-python")
         
