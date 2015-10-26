@@ -15,19 +15,19 @@ except:
 class MySQLStatus(MPlugin):
     def get_stats(self):
         host = self.config.get('host')
-        user =self.config.get('user')
+        user = self.config.get('user')
         password = self.config.get('password')
 
         if import_error:
             self.exit(CRITICAL, message="Please install python-mysqldb or MySQL-python")
         
         try:
-            self.conn = Database.connect(host=host, user=user, passwd=password)
+            conn = Database.connect(host=host, user=user, passwd=password)
         except:
             self.exit(CRITICAL, message="Unable to connect to MySQL Database")
         
         try:
-            conn_cursor = self.conn.cursor(Database.cursors.DictCursor)
+            conn_cursor = conn.cursor(Database.cursors.DictCursor)
             conn_cursor.execute('SHOW GLOBAL STATUS;')
             result = conn_cursor.fetchall()
         except:
