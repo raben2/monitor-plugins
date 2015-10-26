@@ -21,9 +21,6 @@ class MemcacheStatus(MPlugin):
         host = self.config.get('host')
         port = self.config.get('port')
 
-        if not self.which('memcached'):
-            self.exit(CRITICAL, message="Please install memcached")
-
         if import_error:
             self.exit(CRITICAL, message="Please install python-memcached")
         
