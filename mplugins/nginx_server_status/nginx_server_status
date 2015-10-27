@@ -22,7 +22,7 @@ class NginxStatus(MPlugin):
             self.exit(CRITICAL, message="Unable to open URL")
 
         if not url_open or url_open.getcode() != 200:
-            self.exit(CRITICAL, message="Unable to open URL")
+            self.exit(CRITICAL, message="Can not reach URL")
 
         # Set timeout
         timeout = self.config.get('timeout',TIMEOUT)
@@ -89,7 +89,7 @@ class NginxStatus(MPlugin):
                              'Waiting:\s*(\d+)', data)
 
         if not match1 or not match2 or not match3:
-            self.exit(CRITICAL, message='Unable to parse')
+            self.exit(CRITICAL, message='Unable to parse. Make sure that you have provided the nginx_stat page url.')
 
         result['connections'] = int(match1.group(1))
         result['accepted'] = int(match2.group(1))
