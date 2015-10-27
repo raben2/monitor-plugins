@@ -12,7 +12,7 @@ class NginxStatus(MPlugin):
     def run(self):
         url = self.config.get('url')
         if not url:
-           self.exit(CRITICAL, message="Invalid URL")
+           self.exit(CRITICAL, message="Please specify URL")
 
         # Fetch URL
         url_open = None
