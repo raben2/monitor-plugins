@@ -1,0 +1,39 @@
+        'metrics' => array(
+
+            'load' => array(
+                'name'    => 'Load',
+                'help'    => 'Load',
+                'type'    => 'INT',
+                'unit'    => 'items',
+            ),
+            'listen_queue' => array(
+                'name'    => 'Listen Queue',
+                'help'    => 'Listen Queue',
+                'type'    => 'INT',
+                'unit'    => 'items',
+            ),
+            'listen_queue_errors' => array(
+                'name'    => 'Listen Queue Errors',
+                'help'    => 'Listen Queue Errors',
+                'type'    => 'INT',
+                'unit'    => 'items',
+            ),
+            'signal_queue' => array(
+                'name'    => 'Signal Queue',
+                'help'    => 'Signal Queue',
+                'type'    => 'INT',
+                'unit'    => 'items',
+            ),
+            'idle_worker' => array(
+                'name'    => 'Idle Worker',
+                'help'    => 'Idle Worker',
+                'type'    => 'INT',
+                'unit'    => 'items',
+            ),
+            'active_worker' => array(
+                'name'    => 'Active Worker',
+                'help'    => 'Active Worker',
+                'type'    => 'INT',
+                'unit'    => 'items',
+            )
+        )
