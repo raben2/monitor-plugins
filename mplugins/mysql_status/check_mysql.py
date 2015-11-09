@@ -52,7 +52,9 @@ class MySQLStatus(MPlugin):
             'Innodb_rows_updated',
             'Queries',
             'Questions',
-            'Slow_queries'               
+            'Slow_queries',
+            'Threads_created',
+            'Handler_read_rnd_next'
         ]
         
         gauge_data = [
@@ -74,12 +76,10 @@ class MySQLStatus(MPlugin):
             'Slow_launch_threads',
             'Threads_cached',
             'Threads_connected',
-            'Threads_created',
             'Threads_running',
             'Handler_delete',
             'Handler_read_first',
             'Handler_read_rnd',
-            'Handler_read_rnd_next',
             'Handler_update',
             'Handler_write',
             'Created_tmp_disk_tables',
