@@ -56,6 +56,7 @@ class Monit(MPlugin):
                 result = CRITICAL
                 msglist.append(name.upper() + ' is not monitored')
                 
+            # Custom name
             name = name + ': ' + type
             
             # Add data
