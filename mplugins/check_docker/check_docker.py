@@ -7,67 +7,99 @@ sys.path.append('../../../plugins')
 from __mplugin import MPlugin
 from __mplugin import OK, CRITICAL
 
-from docker import Client
+docker_py_error = False
+try:
+    from docker import Client
+except:
+    docker_py_error = True
 
 
 class CheckDocker(MPlugin):
 
     def get_stats(self):
-        # address can be socket: 'unix://var/run/docker.sock' or tcp: 'tcp://127.0.0.1:2375'
-        address = self.config.get('address')
-        cli = Client(base_url=address)
+
+        if docker_py_error:
+            self.exit(CRITICAL, message="please install docker-py")
+
+        base_url = self.config.get('base_url')
+
+        cli = Client(base_url=base_url)
+
         try:
-            return cli.containers(quiet=False, all=True, trunc=False, latest=False, since=None, before=None, limit=-1, size=False, filters=None)
+            cli.info()
         except:
-            self.exit(CRITICAL, message="invalid base url")
+            self.exit(CRITICAL, message="can not connect to docker client")
+
+        data = []
+        ids = []
+        name_id = {}
+        containers = cli.containers()
+        for container in containers:
+            ids.append(container['Id'])
+            name_id[container['Id']] = container['Names']
+        for id in ids:
+            stats_obj = cli.stats(id, True)
+            for stat in stats_obj:
+                stat['id'] = id
+                stat['names'] = name_id[id]
+                data.append(stat)
+                break
+        return data
 
 
     def run(self):
-        data = self.get_stats()
-        
-        counter_data = [
+        stats = self.get_stats()
+        data = {}
 
-        ]
-        
-        gauge_data = [
+        for stat in stats:
+            data['id'] = stat['id']
+            data['names'] = stat['names']
+            mem_percent = 0
+            cpu_percent = 0
+            if stat['memory_stats']['limit'] != 0:
+                mem_percent = float(stat['memory_stats']['usage']) / float(stat['memory_stats']['limit']) * 100.0
+            data['mem_percent'] = mem_percent
 
-        ]
-        
-        tmp_counter = {}
-        for idx in counter_data:
-            try:
-                tmp_counter[idx] = int(data.get(idx, 0))
-            except ValueError:
-                tmp_counter[idx] = data.get(idx, 0)
-        
-        tmp_counter = self.counters(tmp_counter, 'memcache')
-      
-        tmp_gauge = {}
-        for idx in gauge_data:
-            try:
-                tmp_gauge[idx] = int(data.get(idx, 0))
-            except ValueError:
-                tmp_gauge[idx] = data.get(idx, 0)
-                        
-        data = tmp_counter.copy()
-        data.update(tmp_gauge)
-        
-        get_hits = int(data['get_hits'])
-        get_misses = int(data['get_misses'])
-        try:
-            data['hit_percentage'] = (get_hits/(get_hits+get_misses)) * 100
-            data['miss_percentage'] = (get_misses/(get_hits+get_misses)) * 100
-        except ZeroDivisionError:
-            data['hit_percentage'] = 0
-            data['miss_percentage'] = 0
-        
+            previousCPU = stat['precpu_stats']['cpu_usage']['total_usage']
+            previousSystem = stat['precpu_stats']['system_cpu_usage']
+
+            cpuDelta = stat['cpu_stats']['cpu_usage']['total_usage'] - previousCPU
+            systemDelta = stat['cpu_stats']['system_cpu_usage'] - previousSystem
+
+            if systemDelta > 0 and cpuDelta > 0:
+                cpu_percent = (cpuDelta / systemDelta) * float(len(stat['precpu_stats']['cpu_usage']['percpu_usage'])) * 100.0
+            data['cpu_percent'] = cpu_percent
+
+            data['network'] = stat['network']
+
+            for io in stat['blkio_stats']['io_service_bytes_recursive']:
+                if io['op'] == 'Read':
+                    data['read'] = io['value']
+                if io['op'] == 'Write':
+                    data['write'] = io['value']
+                if io['op'] == 'Sync':
+                    data['sync'] = io['value']
+                if io['op'] == 'Async':
+                    data['async'] = io['value']
+
         metrics = {
-            'usage': {
-                'user time': data['rusage_user'],
-                'system time': data['rusage_system']
+            'CPU and Memory usage': {
+                'CPU percentage': data['cpu_percent'],
+                'Memory percentage': data['mem_percent']
+            },
+            'Network Usage': {
+                'Transmitted Bytes': data['tx_bytes'],
+                'Recieved Bytes': data['rx_bytes']
+            },
+            'Block I/O': {
+                'Read': data['read'],
+                'Write': data['write'],
+                'Sync': data['sync'],
+                'Async': data['async']
             }
+
         }
-        self.exit(OK, data, metrics)    
+        self.exit(OK, data, metrics)
                   
 if __name__ == '__main__':    
     monitor = CheckDocker()
