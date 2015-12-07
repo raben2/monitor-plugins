@@ -92,9 +92,9 @@ class MonitConn(dict):
 
         port = int(port)
         self.baseurl = (https and 'https://%s:%i' or 'http://%s:%i') % (host, port)
-        theurl = self.baseurl + '/_status?format=xml'
+        url = self.baseurl + '/_status?format=xml'
 
-        req = urllib2.Request(theurl)
+        req = urllib2.Request(url)
 
         if username:
             base64string = base64.encodestring('%s:%s' % (username, password))[:-1]
@@ -111,9 +111,8 @@ class MonitConn(dict):
         except:
             raise Exception("Error while reading")
 
-        from xml.etree.ElementTree import XML
-
         try:
+            from xml.etree.ElementTree import XML
             root = XML(response)
         except:
             raise Exception("Error while converting to XML")
