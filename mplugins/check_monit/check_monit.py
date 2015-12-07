@@ -7,8 +7,9 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import os
+import urllib2
 import sys
-import urllib2, sys, re, base64
+import base64
 
 sys.path.append('../../../plugins')
 
@@ -28,9 +29,8 @@ class Monit(MPlugin):
 
         try:
             mons = MonitConn(username=username, password=password, port=port)
-
-        except:
-            self.exit(CRITICAL, message="Unable to connecto to monit API")
+        except Exception as e:
+            self.exit(CRITICAL, message=e.message)
 
         data = {}
         metrics = {}
@@ -96,18 +96,27 @@ class MonitConn(dict):
 
         req = urllib2.Request(theurl)
 
-
         if username:
             base64string = base64.encodestring('%s:%s' % (username, password))[:-1]
-            authheader =  "Basic %s" % base64string
+            authheader = "Basic %s" % base64string
             req.add_header("Authorization", authheader)
 
-        handle = urllib2.urlopen(req)
-        response = handle.read()
+        try:
+            handle = urllib2.urlopen(req)
+        except urllib2.URLError as e:
+            raise Exception(e.reason)
+
+        try:
+            response = handle.read()
+        except:
+            raise Exception("Error while reading")
 
         from xml.etree.ElementTree import XML
 
-        root = XML(response)
+        try:
+            root = XML(response)
+        except:
+            raise Exception("Error while converting to XML")
 
         for serv_el in root.iter('service'):
             serv = MonitConn.Service(self, serv_el)
@@ -162,10 +171,10 @@ class MonitConn(dict):
 
             self.monitored = bool(int(self._xmlfind('monitor')))
 
-        def _action(self, action):
-            url = self.daemon.baseurl + '/' + self.name
-            requests.post(url, auth=self.daemon.auth, data={'action': action})
-            self.daemon.update()
+        # def _action(self, action):
+        #     url = self.daemon.baseurl + '/' + self.name
+        #     requests.post(url, auth=self.daemon.auth, data={'action': action})
+        #     self.daemon.update()
 
         def _xmlfind(self, key, type='text'):
             retval = ''
