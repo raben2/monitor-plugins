@@ -22,6 +22,7 @@ class CheckDocker(MPlugin):
             self.exit(CRITICAL, message="please install docker-py")
 
         base_url = self.config.get('base_url')
+        container_name = self.config.get('container_name')
 
         cli = Client(base_url=base_url)
 
@@ -35,52 +36,56 @@ class CheckDocker(MPlugin):
         name_id = {}
         containers = cli.containers()
         for container in containers:
-            ids.append(container['Id'])
-            name_id[container['Id']] = container['Names']
-        for id in ids:
-            stats_obj = cli.stats(id, True)
-            for stat in stats_obj:
-                stat['id'] = id
-                stat['names'] = name_id[id]
-                data.append(stat)
-                break
-        return data
+            if container['Names'][0].split('/')[-1] == container_name:
+                id = container['Id']
 
+        stats_obj = cli.stats(id, True)
+
+        for data in stats_obj:
+            stat = data
+            break
+
+        return stat
 
     def run(self):
-        stats = self.get_stats()
+        stat = self.get_stats()
         data = {}
 
-        for stat in stats:
-            data['id'] = stat['id']
-            data['names'] = stat['names']
-            mem_percent = 0
-            cpu_percent = 0
-            if stat['memory_stats']['limit'] != 0:
-                mem_percent = float(stat['memory_stats']['usage']) / float(stat['memory_stats']['limit']) * 100.0
-            data['mem_percent'] = mem_percent
 
-            previousCPU = stat['precpu_stats']['cpu_usage']['total_usage']
-            previousSystem = stat['precpu_stats']['system_cpu_usage']
+        mem_percent = 0
+        cpu_percent = 0
 
-            cpuDelta = stat['cpu_stats']['cpu_usage']['total_usage'] - previousCPU
-            systemDelta = stat['cpu_stats']['system_cpu_usage'] - previousSystem
+        if stat['memory_stats']['limit'] != 0:
+            mem_percent = float(stat['memory_stats']['usage']) / float(stat['memory_stats']['limit']) * 100.0
+        data['mem_percent'] = mem_percent
 
-            if systemDelta > 0 and cpuDelta > 0:
-                cpu_percent = (cpuDelta / systemDelta) * float(len(stat['precpu_stats']['cpu_usage']['percpu_usage'])) * 100.0
-            data['cpu_percent'] = cpu_percent
+        previousCPU = stat['precpu_stats']['cpu_usage']['total_usage']
+        previousSystem = stat['precpu_stats']['system_cpu_usage']
 
-            data['network'] = stat['network']
+        cpuDelta = stat['cpu_stats']['cpu_usage']['total_usage'] - previousCPU
+        systemDelta = stat['cpu_stats']['system_cpu_usage'] - previousSystem
 
-            for io in stat['blkio_stats']['io_service_bytes_recursive']:
-                if io['op'] == 'Read':
-                    data['read'] = io['value']
-                if io['op'] == 'Write':
-                    data['write'] = io['value']
-                if io['op'] == 'Sync':
-                    data['sync'] = io['value']
-                if io['op'] == 'Async':
-                    data['async'] = io['value']
+        if systemDelta > 0 and cpuDelta > 0:
+            cpu_percent = (cpuDelta / systemDelta) * float(len(stat['cpu_stats']['cpu_usage']['percpu_usage'])) * 100.0
+        data['cpu_percent'] = cpu_percent
+
+        data['network'] = stat['network']
+
+        data['read'] = 0
+        data['write'] = 0
+        data['sync'] = 0
+        data['async'] = 0
+
+        for io in stat['blkio_stats']['io_service_bytes_recursive']:
+            if io['op'] == 'Read':
+                data['read'] = io['value']
+            if io['op'] == 'Write':
+                data['write'] = io['value']
+            if io['op'] == 'Sync':
+                data['sync'] = io['value']
+            if io['op'] == 'Async':
+                data['async'] = io['value']
+
 
         metrics = {
             'CPU and Memory usage': {
@@ -88,8 +93,8 @@ class CheckDocker(MPlugin):
                 'Memory percentage': data['mem_percent']
             },
             'Network Usage': {
-                'Transmitted Bytes': data['tx_bytes'],
-                'Recieved Bytes': data['rx_bytes']
+                'Transmitted Bytes': data['network']['tx_bytes'],
+                'Recieved Bytes': data['network']['rx_bytes']
             },
             'Block I/O': {
                 'Read': data['read'],
