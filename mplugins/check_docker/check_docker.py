@@ -31,9 +31,6 @@ class CheckDocker(MPlugin):
         except:
             self.exit(CRITICAL, message="can not connect to docker client")
 
-        data = []
-        ids = []
-        name_id = {}
         containers = cli.containers()
         for container in containers:
             if container['Names'][0].split('/')[-1] == container_name:
