@@ -12,7 +12,7 @@ try:
 except:
     redis_py_error = True
 
-class CheckDocker(MPlugin):
+class CheckRedis(MPlugin):
 
     def get_stats(self):
 
@@ -96,5 +96,5 @@ class CheckDocker(MPlugin):
         self.exit(OK, data, metrics)
 
 if __name__ == '__main__':
-    monitor = CheckDocker()
+    monitor = CheckRedis()
     monitor.run()
