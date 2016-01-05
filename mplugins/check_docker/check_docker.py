@@ -15,15 +15,7 @@ except:
 
 
 class CheckDocker(MPlugin):
-
-    def get_stats(self):
-
-        if docker_py_error:
-            self.exit(CRITICAL, message="please install docker-py")
-
-        base_url = self.config.get('base_url')
-        container_name = self.config.get('container_name')
-
+    def get_stats(self, base_url, container_name):
         cli = Client(base_url=base_url)
 
         try:
@@ -32,23 +24,35 @@ class CheckDocker(MPlugin):
             self.exit(CRITICAL, message="can not connect to docker client")
 
         containers = cli.containers()
+
+        id = None
+
         for container in containers:
             if container['Names'][0].split('/')[-1] == container_name:
                 id = container['Id']
+                break
 
-        stats_obj = cli.stats(id, True)
+        if id:
+            stats_obj = cli.stats(id, True)
 
-        for data in stats_obj:
-            stat = data
-            break
-
-        return stat
+            for data in stats_obj:
+                return data
+                    
+        return None
 
     def run(self):
-        stat = self.get_stats()
+        if docker_py_error:
+            self.exit(CRITICAL, message="please install docker-py")
+
+        base_url = self.config.get('base_url')
+        container_name = self.config.get('container_name')
+
+        stat = self.get_stats(base_url, container_name)
+        
+        if not stat:
+            self.exit(CRITICAL, message="No container found with name: %s" %container_name)
+
         data = {}
-
-
         mem_percent = 0
         cpu_percent = 0
 
@@ -66,7 +70,10 @@ class CheckDocker(MPlugin):
             cpu_percent = (cpuDelta / systemDelta) * float(len(stat['cpu_stats']['cpu_usage']['percpu_usage'])) * 100.0
         data['cpu_percent'] = cpu_percent
 
-        data['network'] = stat['network']
+        try:
+            data['network'] = stat['networks']['eth0']
+        except KeyError:
+            data['network'] = stat['network']
 
         data['read'] = 0
         data['write'] = 0
