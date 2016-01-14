@@ -41,7 +41,7 @@ class ElasticSearchStatus(MPlugin):
         return stats
 
     def cluster_health(self, host):
-        """Print metrics about /_cluster/health."""
+        """Return metrics about /_cluster/health."""
 
         h = self.call_to_cluster(host, '/_cluster/health')
 
@@ -53,7 +53,7 @@ class ElasticSearchStatus(MPlugin):
         return data
 
     def stats_store(self, host):
-        """Print store metrics from /_cluster/nodes/_local/stats."""
+        """Return store metrics from /_cluster/nodes/_local/stats."""
 
         s = self.get_stats(host, 'store')
 
@@ -62,7 +62,7 @@ class ElasticSearchStatus(MPlugin):
         return data
 
     def stats_indexing(self, host):
-        """Print indexing metrics from /_cluster/nodes/_local/stats."""
+        """Return indexing metrics from /_cluster/nodes/_local/stats."""
 
         s = self.get_stats(host, 'indexing')
 
@@ -73,7 +73,7 @@ class ElasticSearchStatus(MPlugin):
         return data
 
     def stats_get(self, host):
-        """Print GET metrics from /_cluster/nodes/_local/stats."""
+        """Return GET metrics from /_cluster/nodes/_local/stats."""
 
         s = self.get_stats(host, 'get')
 
@@ -83,7 +83,7 @@ class ElasticSearchStatus(MPlugin):
         return data
 
     def stats_search(self, host):
-        """Print search metrics from /_cluster/nodes/_local/stats."""
+        """Return search metrics from /_cluster/nodes/_local/stats."""
 
         s = self.get_stats(host, 'search')
 
@@ -95,15 +95,67 @@ class ElasticSearchStatus(MPlugin):
         return data
 
     def stats_docs(self, host):
-        '''Print doc metrics from /_cluster/nodes/_local/stats.'''
+        """Return doc metrics from /_cluster/nodes/_local/stats."""
 
         s = self.get_stats(host, 'docs')
 
-        print "metric count uint64", s['count']
-        print "metric deleted uint32", s['deleted']
+        data = {'count': s['count'], 'deleted': s['deleted']}
+
+        return data
 
     def run(self):
         host = self.config.get('hostname','localhost')
+
+        data = self.cluster_health(host)
+        data.update(self.stats_store(host))
+        data.update(self.stats_indexing(host))
+        data.update(self.stats_get(host))
+        data.update(self.stats_search(host))
+        data.update(self.stats_docs(host))
+
+        metrics = {
+            'Cluster Health': {
+                'number of nodes': data['number_of_nodes'],
+                'unassigned shards': data['unassigned_shards'],
+                'timed out': data['timed_out'],
+                'active primary shards': data['active_primary_shards'],
+                'relocating shards': data['relocating_shards'],
+                'active shards': data['active_shards'],
+                'initializing shards': data['initializing_shards'],
+                'number of data nodes': data['number_of_data_nodes']
+            },
+            'Store Statistics': {
+                'size in bytes': data['size_in_bytes'],
+                'throttle time in millis': data['throttle_time_in_millis']
+            },
+            'Indexing Statistics': {
+                'delete time in millis': data['delete_time_in_millis'],
+                'delete total': data['delete_total'],
+                'delete current': data['delete_current'],
+                'index time in millis': data['index_time_in_millis'],
+                'index total': data['index_total'],
+                'index current': data['index_current']
+            },
+            'GET Statistics': {
+                'missing total': data['missing_total'],
+                'exists total': data['exists_total'],
+                'current': data['current'],
+                'total': data['total']
+            },
+            'Search Statistics': {
+                'query_total': data['query_total'],
+                'fetch_time_in_millis': data['query_time_in_millis'],
+                'fetch_total': data['fetch_total'],
+                'query_time_in_millis': data['fetch_time_in_millis'],
+                'open_contexts': data['open_contexts'],
+                'fetch_current': data['fetch_current'],
+                'query_current': data['query_current']
+            },
+            'Doc Statistics': {
+                'count': data['count'],
+                'deleted': data['deleted']
+            }
+        }
 
 
 if __name__ == '__main__':
