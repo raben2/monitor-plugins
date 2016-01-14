@@ -63,7 +63,7 @@ class CheckFile(MPlugin):
         
         metrics = {
             'File size': {
-                'size': str(size) . 'B'
+                'size': str(size) + 'B'
             }
         }
         
