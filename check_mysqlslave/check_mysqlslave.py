@@ -30,7 +30,7 @@ class CheckMySQLSlave(MPlugin):
         except:
             self.exit(CRITICAL, message="Unable to run SHOW SLAVE STATUS")
 
-        return dict(map(lambda x: (x.get('Variable_name'), x.get('Value')),result))
+        return result[0]
 
     def run(self):
         if import_error:
@@ -39,6 +39,7 @@ class CheckMySQLSlave(MPlugin):
         host = self.config.get('host')
         user = self.config.get('user')
         password = self.config.get('password')
+
 
         if not host:
             self.exit(CRITICAL, message="Please provide host")
@@ -51,7 +52,7 @@ class CheckMySQLSlave(MPlugin):
         if not data:
             self.exit(CRITICAL, message="status ERROR: metric SLAVE_STATUS string NOT_CONFIGURED")
 
-        if data["Slave_SQL_Running_State"]:
+        if "Slave_SQL_Running_State" in data:
             self.exit(CRITICAL, message=data["Slave_SQL_Running_State"])
 
         metrics = {
