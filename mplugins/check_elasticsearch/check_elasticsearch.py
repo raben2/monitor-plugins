@@ -3,14 +3,11 @@
 import urllib2
 import json
 
-from sys import exit
-from optparse import OptionParser, OptionGroup
-
 import sys
 sys.path.append('/opt/ecmanaged/ecagent/plugins')
 
 from __mplugin import MPlugin
-from __mplugin import OK, CRITICAL, TIMEOUT
+from __mplugin import OK, CRITICAL
 
 
 class ElasticSearchStatus(MPlugin):
@@ -20,12 +17,12 @@ class ElasticSearchStatus(MPlugin):
         try:
             r = urllib2.urlopen('{h}{p}'.format(h=host, p=path))
         except (urllib2.URLError, ValueError) as e:
-            self.exit(CRITICAL, message=e)
+            self.exit(CRITICAL, message='error opening url')
 
         try:
             response = json.loads(r.read())
         except Exception as e:
-            self.exit(CRITICAL, message=e)
+            self.exit(CRITICAL, message='error loading json')
 
         return response
 
@@ -33,7 +30,7 @@ class ElasticSearchStatus(MPlugin):
         """Return a dict of stats from /_cluster/nodes/_local/stats.
         Keyname can be one of: docs, search, indexing, store, get"""
 
-        h = self.call_to_cluster(host, '/_cluster/nodes/_local/stats')
+        h = self.call_to_cluster(host, '/_nodes/stats')
 
         node_name = h['nodes'].keys()[0]
         stats = h['nodes'][node_name]['indices'][keyname]
@@ -104,7 +101,7 @@ class ElasticSearchStatus(MPlugin):
         return data
 
     def run(self):
-        host = self.config.get('hostname','localhost')
+        host = self.config.get('hostname','http://localhost:9200')
 
         data = self.cluster_health(host)
         data.update(self.stats_store(host))
@@ -156,7 +153,7 @@ class ElasticSearchStatus(MPlugin):
                 'deleted': data['deleted']
             }
         }
-
+        self.exit(OK, data, metrics)
 
 if __name__ == '__main__':
     monitor = ElasticSearchStatus()
