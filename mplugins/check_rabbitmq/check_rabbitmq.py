@@ -3,7 +3,6 @@
 import re
 import sys
 import subprocess
-import optparse
 
 sys.path.append('../../../plugins')
 
