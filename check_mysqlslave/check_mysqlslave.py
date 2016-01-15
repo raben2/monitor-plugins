@@ -9,52 +9,62 @@ sys.path.append('../../../plugins')
 from __mplugin import MPlugin
 from __mplugin import OK, CRITICAL
 
+import_error = False
+try:
+    import MySQLdb as Database
+except:
+    import_error = True
+
 
 class CheckMySQLSlave(MPlugin):
-    def mysql_repchk(self, arg):
-        proc = subprocess.Popen(shlex.split(arg),
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
-                                shell=False)
+    def mysql_repchk(self, host, user, password):
 
-        out, err = proc.communicate()
-        ret = proc.returncode
-        return ret, out, err
+        try:
+            conn = Database.connect(host=host, user=user, passwd=password)
+        except:
+            self.exit(CRITICAL, message="Unable to connect to MySQL Database")
+        try:
+            conn_cursor = conn.cursor(Database.cursors.DictCursor)
+            conn_cursor.execute('SHOW SLAVE STATUS;')
+            result = conn_cursor.fetchall()
+        except:
+            self.exit(CRITICAL, message="Unable to run SHOW SLAVE STATUS")
+
+        return dict(map(lambda x: (x.get('Variable_name'), x.get('Value')),result))
 
     def run(self):
-        RETCODE, OUTPUT, ERR = self.mysql_repchk('/usr/bin/mysql \
-                --defaults-file=/root/.my.cnf \
-                -e "SHOW SLAVE STATUS\\G"')
+        if import_error:
+            self.exit(CRITICAL, message="Please install python-mysqldb or MySQL-python")
 
-        if RETCODE:
-            self.exit(CRITICAL, message="There was an error (%d): " % RETCODE)
+        host = self.config.get('host')
+        user = self.config.get('user')
+        password = self.config.get('password')
 
-        if OUTPUT != "":
-            SHOW_STATUS_LIST = OUTPUT.split('\n')
-            del SHOW_STATUS_LIST[0]
-            del SHOW_STATUS_LIST[-1]
+        if not host:
+            self.exit(CRITICAL, message="Please provide host")
 
-            SLAVE_STATUS = {}
-            for i in SHOW_STATUS_LIST:
-                if ":" in i:
-                    SLAVE_STATUS[i.split(':')[0].strip()] = i.split(':')[1].strip()
+        if not user or not password:
+            self.exit(CRITICAL, message="Please provide user and password")
 
-            if SLAVE_STATUS["Slave_IO_Running"] == "Yes" and \
-                    SLAVE_STATUS["Slave_SQL_Running"] == "Yes" and \
-                    SLAVE_STATUS["Last_Errno"] == "0":
+        data = self.mysql_repchk(host, user, password)
 
-                print "status OK\n" \
-                    "metric SLAVE_STATUS string ONLINE\n" \
-                    "metric SECONDS_BEHIND_MASTER int " \
-                    + SLAVE_STATUS["Seconds_Behind_Master"]
-            else:
-                print "status OK\n" \
-                    "metric SLAVE_STATUS string OFFLINE\n" \
-                    "metric SECONDS_BEHIND_MASTER int " \
-                    + SLAVE_STATUS["Seconds_Behind_Master"]
-
-        else:
+        if not data:
             self.exit(CRITICAL, message="status ERROR: metric SLAVE_STATUS string NOT_CONFIGURED")
+
+        if data["Slave_SQL_Running_State"]:
+            self.exit(CRITICAL, message=data["Slave_SQL_Running_State"])
+
+        metrics = {
+            'Seconds Behind Master': {
+                'Seconds Behind Master' : data['Seconds_Behind_Master']
+            }
+        }
+
+        if data["Slave_IO_Running"] == "Yes" and data["Slave_SQL_Running"] == "Yes":
+            self.exit(OK, data, metrics)
+        else:
+            self.exit(CRITICAL, message="Slvae IO or Slave SQL is not running")
+
 
 if __name__ == '__main__':
     monitor = CheckMySQLSlave()
