@@ -55,6 +55,12 @@ class HAproxyStatus(MPlugin):
         if not data_dict:
             self.exit(CRITICAL, message="can not obtain stats")
 
+        if 'slim' in data_dict and 'scur' in data_dict:
+            try:
+                data_dict['spct'] = (data_dict['scur'] / data_dict['slim']) * 100
+            except (TypeError, ZeroDivisionError):
+                pass
+
         return data_dict
 
     def _line_to_dict(self, fields, line):
