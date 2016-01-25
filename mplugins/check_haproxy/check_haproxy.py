@@ -35,7 +35,11 @@ class HAproxyStatus(MPlugin):
         url = "%s%s" % (url, STATS_URL)
 
         r = requests.get(url, auth=auth)
-        r.raise_for_status()
+
+        try:
+            r.raise_for_status()
+        except Exception as e:
+            self.exit(CRITICAL, message=str(e))
 
         data = r.content.splitlines()
 
