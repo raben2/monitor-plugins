@@ -22,7 +22,7 @@ class MySQLStatus(MPlugin):
             self.exit(CRITICAL, message="Please install python-mysqldb or MySQL-python")
         
         try:
-            conn = Database.connect(host=host, user=user, passwd=password)
+            conn = Database.connect(host=host, user=user, passwd=password, connect_timeout=10)
         except:
             self.exit(CRITICAL, message="Unable to connect to MySQL Database")
         
