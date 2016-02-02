@@ -57,16 +57,19 @@ class MySQLStatus(MPlugin):
             'Questions',
             'Slow_queries',
             'Threads_created',
-            'Handler_read_rnd_next'
-        ]
-        
-        gauge_data = [
+            'Handler_read_rnd_next',
             'Innodb_buffer_pool_pages_data',
             'Innodb_buffer_pool_pages_dirty',
             'Innodb_buffer_pool_pages_free',
+            'Qcache_free_memory',
+            'Qcache_hits',
+            'Qcache_queries_in_cache',
             'Innodb_pages_created',
             'Innodb_pages_read',
-            'Innodb_pages_written',
+            'Innodb_pages_written'
+        ]
+        
+        gauge_data = [
             'Innodb_row_lock_current_waits',
             'Innodb_row_lock_time',
             'Innodb_row_lock_time_avg',
@@ -84,10 +87,7 @@ class MySQLStatus(MPlugin):
             'Handler_read_first',
             'Handler_read_rnd',
             'Handler_update',
-            'Handler_write',
-            'Qcache_free_memory',
-            'Qcache_hits',
-            'Qcache_queries_in_cache'
+            'Handler_write'
         ]
         
         tmp_counter = {}
