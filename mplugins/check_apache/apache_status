@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+
 sys.path.append('../../../plugins')
 
 from __mplugin import MPlugin
@@ -9,19 +10,20 @@ from __mplugin import OK, CRITICAL, TIMEOUT
 import socket
 import urllib
 
+
 class ApacheStatus(MPlugin):
     def run(self):
         url = self.config.get('url')
 
         if not url:
-           self.exit(CRITICAL, message="Invalid URL")
-           
+            self.exit(CRITICAL, message="Invalid URL")
+
         # Add auto to server-status url
         if not url.endswith('?auto'):
             url = url + '?auto'
 
         # Set timeout
-        socket.setdefaulttimeout(self.config.get('timeout',TIMEOUT))
+        socket.setdefaulttimeout(self.config.get('timeout', TIMEOUT))
 
         # Fetch URL
         try:
@@ -31,9 +33,10 @@ class ApacheStatus(MPlugin):
 
         if urlopen.getcode() != 200:
             self.exit(CRITICAL, message="Unable to open URL")
+
         data = self._parse_status(urlopen.readlines())
-        
-	metrics = {
+
+        metrics = {
             'Apache Workers': {
                 'busy_workers': data['busy_workers'],
                 'idle_workers': data['idle_workers']
@@ -47,7 +50,7 @@ class ApacheStatus(MPlugin):
                 'Reading': data['reading_request'],
                 'Sending': data['sending_reply'],
                 'Keepalive': data['keepalive'],
-                'DNS Lookup': data['dns_lookup']  ,
+                'DNS Lookup': data['dns_lookup'],
                 'Closing': data['closing_connection'],
                 'Logging': data['logging'],
                 'Finishing': data['gracefully_finishing'],
@@ -61,7 +64,7 @@ class ApacheStatus(MPlugin):
                 'cpuload': data['cpuload']
             }
         }
-        self.exit(OK,data,metrics)
+        self.exit(OK, data, metrics)
 
     def _parse_status(self, raw):
         # Initialize with None because mod_status has different levels of
@@ -89,46 +92,49 @@ class ApacheStatus(MPlugin):
                   'gracefully_finishing': None,
                   'idle_cleanup_of_worker': None,
                   'open_slots': None
-        }
+                  }
 
         # Do the nasty parsing. Doing this programatically may be
         # more extensible but it's much rougher looking.
-        
+
         # Old python compat
-        if self._is_list(raw):   
+        if self._is_list(raw):
             raw = '\n'.join(raw)
-        
+
         for line in str(raw).splitlines():
             if not line: continue
 
+            if ': ' not in line:
+                continue
+
             (key, value) = line.split(': ')
             if key == 'Total Accesses':
-                parsed['total_accesses'] = self.counter(int(value),'total_accesses')
-                
+                parsed['total_accesses'] = self.counter(int(value), 'total_accesses')
+
             if key == 'Total kBytes':
-                parsed['total_kbytes'] = self.counter(int(value),'total_kbytes')
-                
+                parsed['total_kbytes'] = self.counter(int(value), 'total_kbytes')
+
             if key == 'CPULoad':
                 parsed['cpuload'] = float(value)
-                
+
             if key == 'Uptime':
                 parsed['uptime'] = int(value)
-                
+
             if key == 'ReqPerSec':
                 parsed['requests_per_second'] = float(value)
-                
+
             if key == 'BytesPerSec':
                 parsed['bytes_per_second'] = float(value)
-                
+
             if key == 'BytesPerReq':
                 parsed['bytes_per_request'] = float(value)
-                
+
             if key == 'BusyWorkers':
                 parsed['busy_workers'] = int(value)
-                
+
             if key == 'IdleWorkers':
                 parsed['idle_workers'] = int(value)
-                
+
             if key == 'Scoreboard':
                 parsed['waiting_for_connection'] = value.count('_')
                 parsed['starting_up'] = value.count('S')
@@ -144,7 +150,6 @@ class ApacheStatus(MPlugin):
 
         return parsed
 
+
 monitor = ApacheStatus()
 monitor.run()
-
-
