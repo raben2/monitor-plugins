@@ -85,6 +85,8 @@ class CheckURL(MPlugin):
             content = r.content
             code = r.status_code
             size = len(content)
+        else:
+            self.exit(CRITICAL, message="Action is not supportedL")
 
         data = {
             'content': content,
