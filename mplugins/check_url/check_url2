@@ -16,11 +16,27 @@ class CheckURL(MPlugin):
     def run(self):
         url = self.config.get('url')
         method = self.config.get('method')
-        headers = self.config.get('headers')
-        data = self.config.get('data')
+        headers_raw = self.config.get('headers')
+        data_raw = self.config.get('data')
         content = ''
         if not url:
            self.exit(CRITICAL, message="Invalid URL")
+
+        headers = {}
+
+        if headers_raw:
+            headers_list = headers_raw.split(',')
+            for item in headers_list:
+                key, value = item.split(':')
+                headers[key] = value
+
+        data = {}
+
+        if data_raw:
+            data_list = data_raw.split(',')
+            for item in data_list:
+                key, value = item.split(',')
+                data[key] = value
         
         # Set timeout
         timeout = self.config.get('timeout',TIMEOUT)
