@@ -8,11 +8,16 @@ from __mplugin import OK, WARNING, CRITICAL, UNKNOWN, TIMEOUT
 
 import urllib
 import socket
+import json
+import requests
 from time import time
 
 class CheckURL(MPlugin):
     def run(self):
         url = self.config.get('url')
+        method = self.config.get('method')
+        headers = self.config.get('headers')
+        data = self.config.get('data')
         content = ''
         if not url:
            self.exit(CRITICAL, message="Invalid URL")
@@ -21,32 +26,52 @@ class CheckURL(MPlugin):
         timeout = self.config.get('timeout',TIMEOUT)
         socket.setdefaulttimeout(int(timeout))
 
-        start_time = time();
-        
-        # Fetch
-        try:
-            urlopen = urllib.urlopen(url)
+        if method == 'GET':
+            start_time = time()
+            # Fetch
+            try:
+                urlopen = urllib.urlopen(url)
+            except:
+                self.exit(CRITICAL, message="Unable to open URL")
 
-        except:
-            self.exit(CRITICAL, message="Unable to open URL")
-        
-        end_time = time()
-        mytime = "%.2f" %(end_time - start_time)
-        
-        # Get size
-        size = 0
-        headers = urlopen.info()
-        content = ''.join(urlopen.readlines())
-        
-        if "content-length" in headers:
-            size = int(headers["Content-Length"])
-        
-        else:
+            end_time = time()
+            mytime = "%.2f" %(end_time - start_time)
+
+            # Get size
+            size = 0
+            headers = urlopen.info()
+            content = ''.join(urlopen.readlines())
+            code = urlopen.getcode()
+
+            if "content-length" in headers:
+                size = int(headers["Content-Length"])
+            else:
+                size = len(content)
+
+        elif method == 'POST':
+            start_time = time()
+
+            try:
+                r = requests.post(url, data=json.dumps(data), headers = headers)
+            except:
+                self.exit(CRITICAL, message="Unable to POST to open URL")
+
+            if not r.ok:
+                self.exit(CRITICAL, message="POST returned with error with status code "+r.status_code)
+
+            end_time = time()
+            mytime = "%.2f" %(end_time - start_time)
+
+            # Get size
+            size = 0
+
+            content = r.content
+            code = r.status_code
             size = len(content)
         
         data = {
             'content': content,
-            'code': urlopen.getcode(),
+            'code': code,
             'size': size,
             'time': mytime
         }
