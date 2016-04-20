@@ -67,7 +67,7 @@ class CheckDocker(MPlugin):
         systemDelta = stat['cpu_stats']['system_cpu_usage'] - previousSystem
 
         if systemDelta > 0 and cpuDelta > 0:
-            cpu_percent = (cpuDelta / systemDelta) * float(len(stat['cpu_stats']['cpu_usage']['percpu_usage'])) * 100.0
+            cpu_percent = (float(cpuDelta) / float(systemDelta)) * float(len(stat['cpu_stats']['cpu_usage']['percpu_usage'])) * 100.0
         data['cpu_percent'] = cpu_percent
 
         try:
