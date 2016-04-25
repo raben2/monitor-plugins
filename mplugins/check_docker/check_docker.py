@@ -53,6 +53,20 @@ class CheckDocker(MPlugin):
             self.exit(CRITICAL, message="No container found with name: %s" %container_name)
 
         data = {}
+        counter_data = [
+            'read',
+            'write',
+            'sync',
+            'async',
+            'network_tx_bytes',
+            'network_rx_bytes'
+        ]
+
+        gauge_data = [
+            'cpu_percent',
+            'mem_percent'
+        ]
+
         mem_percent = 0
         cpu_percent = 0
 
@@ -90,6 +104,27 @@ class CheckDocker(MPlugin):
             if io['op'] == 'Async':
                 data['async'] = io['value']
 
+        data['network_tx_bytes']= data['network']['tx_bytes']
+        data['network_rx_bytes'] =data['network']['rx_bytes']
+
+        tmp_counter = {}
+        for idx in counter_data:
+            try:
+                tmp_counter[idx] = int(data.get(idx,0))
+            except:
+                tmp_counter[idx] = data.get(idx,0)
+
+        tmp_counter = self.counters(tmp_counter,'docker')
+
+        tmp_gauge = {}
+        for idx in gauge_data:
+            try:
+                tmp_gauge[idx] = int(data.get(idx,0))
+            except:
+                tmp_gauge[idx] = data.get(idx,0)
+
+        data = tmp_counter.copy()
+        data.update(tmp_gauge)
 
         metrics = {
             'CPU and Memory usage': {
@@ -97,8 +132,8 @@ class CheckDocker(MPlugin):
                 'Memory percentage': data['mem_percent']
             },
             'Network Usage': {
-                'Transmitted Bytes': data['network']['tx_bytes'],
-                'Recieved Bytes': data['network']['rx_bytes']
+                'Transmitted Bytes': data['network_tx_bytes'],
+                'Recieved Bytes': data['network_rx_bytes']
             },
             'Block I/O': {
                 'Read': data['read'],
