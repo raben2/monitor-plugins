@@ -16,7 +16,7 @@ class CheckURL(MPlugin):
         method = self.config.get('method')
         headers_raw = self.config.get('headers')
         data_raw = self.config.get('data')
-        content = ''
+
         if not url:
            self.exit(CRITICAL, message="Invalid URL")
 
@@ -46,11 +46,14 @@ class CheckURL(MPlugin):
             start_time = time()
 
             try:
-                content_type = headers.get("Content-Type", None)
-                if content_type == 'application/json':
-                    req = urllib2.Request(url, json.dumps(data), headers)
+                if headers:
+                    content_type = headers.get("Content-Type", None)
+                    if content_type == 'application/json':
+                        req = urllib2.Request(url, json.dumps(data), headers)
+                    else:
+                        req = urllib2.Request(url, urllib.urlencode(data), headers)
                 else:
-                    req = urllib2.Request(url, urllib.urlencode(data), headers)
+                    req = urllib2.Request(url, urllib.urlencode(data))
                 urlopen = urllib2.urlopen(req)
             except:
                 self.exit(CRITICAL, message="Unable to POST to open URL")
