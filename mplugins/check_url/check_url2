@@ -7,7 +7,9 @@ from __mplugin import MPlugin
 from __mplugin import OK, WARNING, CRITICAL, UNKNOWN, TIMEOUT
 
 import urllib
+import urllib2
 import socket
+import json
 from time import time
 
 class CheckURL(MPlugin):
@@ -31,18 +33,23 @@ class CheckURL(MPlugin):
         data = {}
 
         if data_raw:
-            data_list = data_raw.split(',')
-            for item in data_list:
-                key, value = item.split(':')
-                data[key.strip()] = value.strip()
+            try:
+                data = json.loads(data_raw)
+            except:
+                data_list = data_raw.split(',')
+                for item in data_list:
+                    key, value = item.split(':')
+                    data[key.strip()] = value.strip()
 
         # Set timeout
         timeout = self.config.get('timeout',TIMEOUT)
         socket.setdefaulttimeout(int(timeout))
 
         if method == 'POST':
-            import urllib2
-            import json
+
+            if not data:
+                self.exit(CRITICAL, message="Unable to parse data to POST")
+
             start_time = time()
 
             try:
