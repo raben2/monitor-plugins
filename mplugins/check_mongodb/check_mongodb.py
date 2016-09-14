@@ -7,7 +7,7 @@ from __mplugin import MPlugin
 from __mplugin import OK, CRITICAL, TIMEOUT
 
 
-# pip install python-memcached
+# pip install pymongo
 import_error = False
 try:
     from pymongo import MongoClient as Client
@@ -74,7 +74,7 @@ class MongoDBStatus(MPlugin):
             }
         }
 
-        self.exit(OK, data, metrics)    
+        self.exit(OK, data, metrics)
                   
 if __name__ == '__main__':    
     monitor = MongoDBStatus()
