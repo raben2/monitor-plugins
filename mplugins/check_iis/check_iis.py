@@ -15,8 +15,12 @@ except:
 
 class CheckIIS(MPlugin):
     def get_stats(self):
-        wmi_conn = wmi.WMI()
-        wmi_cls = wmi_conn.Win32_PerfFormattedData_W3SVC_WebService()
+        wmi_cls = None
+        try:
+            wmi_conn = wmi.WMI()
+            wmi_cls = wmi_conn.Win32_PerfFormattedData_W3SVC_WebService()
+        except:
+            pass
         return  wmi_cls
 
     def run(self):
