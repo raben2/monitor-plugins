@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+# This file is part of the api monitoring plugins
+# Maintainer Georg Rabenstein @raben2
+# git@github.com:raben2/monitor-plugins.git
 
 import urllib2
 import json
