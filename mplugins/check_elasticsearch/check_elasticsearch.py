@@ -101,15 +101,17 @@ class ElasticSearchStatus(MPlugin):
         return data
 
     def run(self):
-        usage = "usage: %prog -H hostname"
+        usage = "usage: %prog -H hostname -M metric(s)"
         parser = OptionParser(usage=usage)
         parser.add_option("-H", "--host", dest="host", help="Elasticsearch Host", metavar="HOST")
+        parser.add_option("-M", "--metric" dest="metric" help="Metric to be checked: CH = Cluster Health, SS = Storage Statistics, SH = Storage Health,  GS = Get Statistics, Ss = Search statistics, DS = Doc Statistics ", metavar="METRIC")
         if len(sys.argv) < 2:
            parser.print_help()
            sys.exit(-1)
         else:
            (options, args) = parser.parse_args()
            host = 'http://' + options.host.lower() + ':9200'
+           metric = options.metric
 
 
         data = self.cluster_health(host)
@@ -119,49 +121,75 @@ class ElasticSearchStatus(MPlugin):
         data.update(self.stats_search(host))
         data.update(self.stats_docs(host))
 
-        metrics = {
-            'Cluster Health': {
-                'number of nodes': data['number_of_nodes'],
-                'unassigned shards': data['unassigned_shards'],
-                'timed out': data['timed_out'],
-                'active primary shards': data['active_primary_shards'],
-                'relocating shards': data['relocating_shards'],
-                'active shards': data['active_shards'],
-                'initializing shards': data['initializing_shards'],
-                'number of data nodes': data['number_of_data_nodes']
-            },
-            'Store Statistics': {
-                'size in bytes': data['size_in_bytes'],
-                'throttle time in millis': data['throttle_time_in_millis']
-            },
-            'Indexing Statistics': {
-                'delete time in millis': data['delete_time_in_millis'],
-                'delete total': data['delete_total'],
-                'delete current': data['delete_current'],
-                'index time in millis': data['index_time_in_millis'],
-                'index total': data['index_total'],
-                'index current': data['index_current']
-            },
-            'GET Statistics': {
-                'missing total': data['missing_total'],
-                'exists total': data['exists_total'],
-                'current': data['current'],
-                'total': data['total']
-            },
-            'Search Statistics': {
-                'query_total': data['query_total'],
-                'fetch_time_in_millis': data['query_time_in_millis'],
-                'fetch_total': data['fetch_total'],
-                'query_time_in_millis': data['fetch_time_in_millis'],
-                'open_contexts': data['open_contexts'],
-                'fetch_current': data['fetch_current'],
-                'query_current': data['query_current']
-            },
-            'Doc Statistics': {
-                'count': data['count'],
-                'deleted': data['deleted']
-            }
-        }
+        if metric == "CH":  
+
+             metrics = {
+              'Cluster Health': {
+                  'number of nodes': data['number_of_nodes'],
+                  'unassigned shards': data['unassigned_shards'],
+                  'timed out': data['timed_out'],
+                  'active primary shards': data['active_primary_shards'],
+                  'relocating shards': data['relocating_shards'],
+                  'active shards': data['active_shards'],
+                  'initializing shards': data['initializing_shards'],
+                  'number of data nodes': data['number_of_data_nodes']
+                  }
+               }
+        elif metric == "SS":
+
+             metrics = {
+              'Store Statistics': {
+                  'size in bytes': data['size_in_bytes'],
+                  'throttle time in millis': data['throttle_time_in_millis']
+                  }
+             }
+        elif metric == "IS":
+
+             metrics = {
+
+              'Indexing Statistics': {
+                  'delete time in millis': data['delete_time_in_millis'],
+                  'delete total': data['delete_total'],
+                  'delete current': data['delete_current'],
+                  'index time in millis': data['index_time_in_millis'],
+                  'index total': data['index_total'],
+                  'index current': data['index_current']
+                  }
+             }
+        elif metric == "GS":
+
+             metrics = {
+
+              'GET Statistics': {
+                  'missing total': data['missing_total'],
+                  'exists total': data['exists_total'],
+                  'current': data['current'],
+                  'total': data['total']
+                  }
+             }
+        elif metric == "Ss":
+
+             metrics = {
+
+              'Search Statistics': {
+                  'query_total': data['query_total'],
+                  'fetch_time_in_millis': data['query_time_in_millis'],
+                  'fetch_total': data['fetch_total'],
+                  'query_time_in_millis': data['fetch_time_in_millis'],
+                  'open_contexts': data['open_contexts'],
+                  'fetch_current': data['fetch_current'],
+                  'query_current': data['query_current']
+                  }
+             }
+        elif metric == "DS":
+
+             metrics = {p
+
+              'Doc Statistics': {
+                  'count': data['count'],
+                  'deleted': data['deleted']
+              }
+          }
         self.exit(OK, data, metrics)
 
 if __name__ == '__main__':
