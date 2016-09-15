@@ -4,7 +4,7 @@ import urllib2
 import json
 
 import sys
-sys.path.append('/opt/ecmanaged/ecagent/plugins')
+from optparse import OptionParser
 
 from __mplugin import MPlugin
 from __mplugin import OK, CRITICAL
@@ -101,7 +101,16 @@ class ElasticSearchStatus(MPlugin):
         return data
 
     def run(self):
-        host = self.config.get('hostname','http://localhost:9200')
+        usage = "usage: %prog -H hostname"
+        parser = OptionParser(usage=usage)
+        parser.add_option("-H", "--host", dest="host", help="Elasticsearch Host", metavar="HOST")
+        if len(sys.argv) < 2:
+           parser.print_help()
+           sys.exit(-1)
+        else:
+           (options, args) = parser.parse_args()
+           host = 'http://' + options.host.lower() + ':9200'
+
 
         data = self.cluster_health(host)
         data.update(self.stats_store(host))
