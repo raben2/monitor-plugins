@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 
 import sys
-
-sys.path.append('../../../plugins')
-
+from optparse import OptionParser
 from __mplugin import MPlugin
 from __mplugin import OK, CRITICAL
 
@@ -43,10 +41,19 @@ class CheckDocker(MPlugin):
     def run(self):
         if docker_py_error:
             self.exit(CRITICAL, message="please install docker-py")
+        usage = "usage: %prog -H hostname -C Container"
+        parser = OptionParser(usage=usage)
+        parser.add_option("-H", "--host", dest="base_url", help="Docker Host", metavar="HOST")
+        parser.add_option("-C", "--container", dest="container_name", help="docker container", metavar="CONTAINER")
+        parser.add_option("-M", "--metric", dest="metric", help="Metric to be checked: CPU, NET or HDD", metavar="METRIC")
 
-        base_url = self.config.get('base_url')
-        container_name = self.config.get('container_name')
-
+        if len(sys.argv) < 2:
+           parser.print_help()
+           sys.exit(-1)
+        else:
+           (options, args) = parser.parse_args()
+           base_url = 'tcp://' + options.base_url.lower() + ':2375'
+           container_name = options.container_name
         stat = self.get_stats(base_url, container_name)
         
         if not stat:
@@ -126,23 +133,35 @@ class CheckDocker(MPlugin):
         data = tmp_counter.copy()
         data.update(tmp_gauge)
 
-        metrics = {
-            'CPU and Memory usage': {
-                'CPU percentage': data['cpu_percent'],
-                'Memory percentage': data['mem_percent']
-            },
-            'Network Usage': {
-                'Transmitted Bytes': data['network_tx_bytes'],
-                'Recieved Bytes': data['network_rx_bytes']
-            },
-            'Block I/O': {
-                'Read': data['read'],
-                'Write': data['write'],
-                'Sync': data['sync'],
-                'Async': data['async']
-            }
+        if metric == "CPU":  
 
-        }
+              metrics = {
+                'CPU and Memory usage': {
+                    'CPU percentage': data['cpu_percent'],
+                    'Memory percentage': data['mem_percent']
+                  }
+             }
+        elif metric == "HDD":
+
+             metrics = {
+
+                'Network Usage': {
+                    'Transmitted Bytes': data['network_tx_bytes'],
+                    'Recieved Bytes': data['network_rx_bytes']
+                  }
+             }
+        elif metric == "HDD":
+
+             metrics = {
+
+                'Block I/O': {
+                    'Read': data['read'],
+                    'Write': data['write'],
+                    'Sync': data['sync'],
+                    'Async': data['async']
+                }    
+
+            }
         self.exit(OK, data, metrics)
                   
 if __name__ == '__main__':    

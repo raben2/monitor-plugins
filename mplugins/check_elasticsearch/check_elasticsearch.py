@@ -104,7 +104,7 @@ class ElasticSearchStatus(MPlugin):
         usage = "usage: %prog -H hostname -M metric(s)"
         parser = OptionParser(usage=usage)
         parser.add_option("-H", "--host", dest="host", help="Elasticsearch Host", metavar="HOST")
-        parser.add_option("-M", "--metric" dest="metric" help="Metric to be checked: CH = Cluster Health, SS = Storage Statistics, SH = Storage Health,  GS = Get Statistics, Ss = Search statistics, DS = Doc Statistics ", metavar="METRIC")
+        parser.add_option("-M", "--metric", dest="metric", help="Metric to be checked: CH = Cluster Health, SS = Storage Statistics, SH = Storage Health,  GS = Get Statistics, Ss = Search statistics, DS = Doc Statistics ", metavar="METRIC")
         if len(sys.argv) < 2:
            parser.print_help()
            sys.exit(-1)
