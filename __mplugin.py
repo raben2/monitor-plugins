@@ -36,7 +36,7 @@ TIMEOUT = 254
 
 import sys
 import signal
-
+import json
 from os.path import dirname, abspath, join, exists, basename, getmtime
 from time import time
 from os import makedirs, chmod, utime
@@ -444,7 +444,7 @@ class MPlugin:
         retval = ''
 
         try:
-            retval = json.dumps(elm).encode('utf8')
+            retval = json.dumps(elm, indent=4, sort_keys=True).encode('utf8')
         except:
             pass
 
