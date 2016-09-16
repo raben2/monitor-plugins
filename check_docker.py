@@ -1,7 +1,9 @@
 #!/usr/bin/env python
+# This file is part of the api monitoring plugins
+# Maintainer Georg Rabenstein @raben2
+# git@github.com:raben2/monitor-plugins.git
 
 import sys
-import json
 from optparse import OptionParser
 from __mplugin import MPlugin
 from __mplugin import OK, CRITICAL
@@ -24,17 +26,18 @@ class CheckDocker(MPlugin):
 
         containers = cli.containers()
         id = None
+        ignore_networks = "host"
 
         for container in containers:
             if container['Names'][0].split('/')[-1] == container_name:
                 id = container['Id']
+                nm = container['HostConfig']['NetworkMode']
                 break
-
         if id:
             stats_obj = cli.stats(id, True)
 
             for data in stats_obj:
-                return data
+                return data, nm
                     
         return None
 
@@ -45,7 +48,7 @@ class CheckDocker(MPlugin):
         parser = OptionParser(usage=usage)
         parser.add_option("-H", "--host", dest="base_url", help="Docker Host", metavar="HOST")
         parser.add_option("-C", "--container", dest="container_name", help="docker container", metavar="CONTAINER")
-        parser.add_option("-M", "--metric", dest="metric", help="Metric to be checked: CPU, NET or HDD", metavar="METRIC")
+        parser.add_option("-M", "--metric", dest="metric", help="Metric to be checked: CPU, NET or HDD", metavar="METRIC", default="ALL")
 
         if len(sys.argv) < 2:
            parser.print_help()
@@ -55,10 +58,9 @@ class CheckDocker(MPlugin):
            base_url = 'tcp://' + options.base_url.lower() + ':2375'
            container_name = options.container_name
            metric = options.metric
-        stat = self.get_stats(base_url, container_name)
+        stat, nm = self.get_stats(base_url, container_name)
         if not stat:
             self.exit(CRITICAL, message="No container found with name: %s" %container_name)
-
         data = {}
         counter_data = [
             'read',
@@ -91,10 +93,15 @@ class CheckDocker(MPlugin):
             cpu_percent = (float(cpuDelta) / float(systemDelta)) * float(len(stat['cpu_stats']['cpu_usage']['percpu_usage'])) * 100.0
         data['cpu_percent'] = cpu_percent
 
-        try:
+        if nm != "host":
+          try:
             data['network'] = stat['networks']['eth0']
-        except KeyError:
-            data['network'] = stat['networks']
+            data['network_tx_bytes']= data['network']['tx_bytes']
+            data['network_rx_bytes'] =data['network']['rx_bytes']
+          except KeyError:
+            data['network'] = stat['pid_stats']
+            data['network_tx_bytes']= data['network']['tx_bytes']
+            data['network_rx_bytes'] =data['network']['rx_bytes']       
 
         data['read'] = 0
         data['write'] = 0
@@ -110,9 +117,6 @@ class CheckDocker(MPlugin):
                 data['sync'] = io['value']
             if io['op'] == 'Async':
                 data['async'] = io['value']
-
-        data['network_tx_bytes']= data['network']['tx_bytes']
-        data['network_rx_bytes'] =data['network']['rx_bytes']
 
         tmp_counter = {}
         for idx in counter_data:
@@ -160,6 +164,24 @@ class CheckDocker(MPlugin):
                 }    
 
             }
+        elif metric == "ALL":
+             metrics = {
+                'CPU and Memory usage': {
+                    'CPU percentage': data['cpu_percent'],
+                    'Memory percentage': data['mem_percent']
+                  },
+                'Network Usage': {
+                    'Transmitted Bytes': data['network_tx_bytes'],
+                    'Recieved Bytes': data['network_rx_bytes']
+                  },
+                'Block I/O': {
+                    'Read': data['read'],
+                    'Write': data['write'],
+                    'Sync': data['sync'],
+                    'Async': data['async']
+                }    
+
+            }       
         self.exit(OK, data, metrics)
                   
 if __name__ == '__main__':    
