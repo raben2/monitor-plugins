@@ -58,7 +58,10 @@ class CheckDocker(MPlugin):
            base_url = 'tcp://' + options.base_url.lower() + ':2375'
            container_name = options.container_name
            metric = options.metric
-        stat, nm = self.get_stats(base_url, container_name)
+        try:
+          stat, nm = self.get_stats(base_url, container_name)
+        except TypeError:
+            self.exit(CRITICAL, message="Container %s is not runnung" %container_name)
         if not stat:
             self.exit(CRITICAL, message="No container found with name: %s" %container_name)
         data = {}
