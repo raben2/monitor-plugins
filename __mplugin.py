@@ -111,20 +111,8 @@ class MPlugin:
         metrics = self._sanitize(metrics)
             
         # Write counters and interval
-        self._counters_write()
-        self._interval_write()
-        
-        print str(
-            self._to_json({
-                'id': self.id,
-                'name': self._to_utf8(self.name),
-                'message': self._to_utf8(message),
-                'data': self._to_utf8(data),
-                'metrics': self._to_utf8(metrics),
-                'interval': self._get_time_interval()
-            }).encode('utf-8')
-        )
-        
+        print message, data
+
         sys.exit(state)
 
     def install(self, id, config, script):
