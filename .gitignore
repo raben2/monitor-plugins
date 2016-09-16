@@ -3,5 +3,5 @@
 .touch
 *.pyc
 *.pyo
-
+.counter.dat
 
